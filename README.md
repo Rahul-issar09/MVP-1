@@ -1,171 +1,184 @@
-I'll help you create a polished GitHub README.md with proper formatting and visual elements. I see you're working on a VNC security monitoring system. Let me create a comprehensive README that showcases your project effectively.
+Here is a **clean, complete, production-ready README.md** for your **SentinelVNC** project — properly formatted, structured, and polished for GitHub.
+You can directly copy–paste this as `README.md`.
 
-```markdown
-# 🔒 SentinelVNC - Advanced VNC Security Monitor
+---
 
-[![Python](https://img.shields.io
-I'll help you create a polished GitHub README.md with proper formatting and visual elements for your SentinelVNC project.
-
-```markdown
-# 🔒 SentinelVNC - Advanced VNC Security Monitor
+````markdown
+# 🔒 SentinelVNC — Advanced VNC Security Monitor
 
 [![Python](https://img.shields.io/badge/Python-3.8%2B-blue)](https://www.python.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Contributions Welcome](https://img.shields.io/badge/Contributions-Welcome-brightgreen.svg)](CONTRIBUTING.md)
+[![Issues](https://img.shields.io/github/issues/Rahul-issar09/Team-Falcon-SIH)](https://github.com/Rahul-issar09/Team-Falcon-SIH/issues)
+[![Stars](https://img.shields.io/github/stars/Rahul-issar09/Team-Falcon-SIH?style=social)](https://github.com/Rahul-issar09/Team-Falcon-SIH)
 
-> **SentinelVNC** is an advanced security monitoring system for VNC connections, designed to detect and prevent data exfiltration attempts in real-time through comprehensive traffic analysis and behavioral monitoring.
+> **SentinelVNC** is a cutting-edge security monitoring system for VNC sessions that detects data exfiltration attempts, identifies suspicious behaviour, and provides AI-powered visual intelligence through OCR and activity analysis.
 
-## 🌟 Key Features
+---
 
-### 🕵️‍♂️ Multi-Layer Detection
-- **Network Analysis**: Deep packet inspection and protocol validation
-- **Application Monitoring**: Clipboard and input tracking
-- **Visual Intelligence**: Screenshot analysis and OCR detection
+## 🌟 Features
 
-### 🛡️ Security Measures
-- Real-time threat detection
-- Automated incident response
-- Immutable evidence logging
-- Blockchain-backed forensics
+### 🕵️‍♂️ Multi-Layer Detection Engine
+- **Network Traffic Analysis**
+  - Deep Packet Inspection  
+  - VNC protocol validation  
+  - Anomaly detection  
 
-### 📊 Dashboard & Reporting
-- Live monitoring interface
-- Detailed incident reports
-- Forensic evidence browser
+- **Application-Level Monitoring**
+  - Clipboard tracking  
+  - Keyboard & mouse input monitoring  
+  - File change and transfer activity  
+
+- **Visual Intelligence (OCR)**
+  - Real-time screenshot capture  
+  - Tesseract-based OCR text extraction  
+  - Sensitive data leak detection  
+
+---
+
+## 🛡️ Security & Defense
+- 🔥 **Real-time threat detection**
+- ⚡ **Automated incident response & alerts**
+- 📁 **Immutable evidence logging**
+- ⛓ **Blockchain-backed forensics (Hyperledger Fabric)**  
+- 🧾 **Forensic-ready incident reports**
+
+---
+
+## 📊 Dashboard & Reporting
+- Live Web Dashboard (Node.js + Express)
+- Visual session replay
+- Incident timeline visualization
+- Evidence browser with OCR text highlights
+
+---
 
 ## 🚀 Quick Start
 
-### Prerequisites
-- Python 3.8+
-- Node.js 16+
-- Tesseract OCR
-- Hyperledger Fabric (for blockchain features)
+### ✔️ Prerequisites
+Make sure you have:
 
-### Installation
+- **Python 3.8+**
+- **Node.js 16+**
+- **Tesseract OCR** installed  
+  - Windows: https://github.com/UB-Mannheim/tesseract/wiki
+- **Hyperledger Fabric** (optional but recommended)
+
+---
+
+## 🛠️ Installation & Setup
+
+### 1️⃣ Clone the repository
 ```bash
-# Clone the repository
 git clone https://github.com/Rahul-issar09/Team-Falcon-SIH.git
 cd Team-Falcon-SIH
+````
 
-# Install Python dependencies
+### 2️⃣ Install Python dependencies
+
+```bash
 pip install -r requirements.txt
+```
 
-# Install Node.js dependencies
+### 3️⃣ Install Node.js dependencies
+
+```bash
 npm install
 ```
 
-### Configuration
-1. Copy the example environment file:
-   ```bash
-   cp .env.example .env
-   ```
-2. Update `.env` with your configuration
+### 4️⃣ Configure Tesseract OCR
 
-### Running the System
-Start each component in separate terminals:
+Set environment variable (Windows example):
+
 ```bash
-# Risk Engine
-python -m risk_engine.main
-
-# Response Engine
-python -m response_engine.main
-
-# Forensics Service
-python -m forensics.service
-
-# VNC Proxy
-node proxy/index.js
+setx TESSDATA_PREFIX "C:\Program Files\Tesseract-OCR\tessdata"
 ```
 
-## 🏗️ System Architecture
+---
 
-```mermaid
-graph TD
-    A[VNC Client] -->|Connects to| B[SentinelVNC Proxy]
-    B -->|Forwards to| C[VNC Server]
-    B -->|Sends to| D[Network Detector]
-    B -->|Sends to| E[App Detector]
-    B -->|Sends to| F[Visual Detector]
-    D & E & F --> G[Risk Engine]
-    G --> H[Response Engine]
-    G --> I[Forensics Service]
-    I --> J[Blockchain Storage]
+## ▶️ Usage
+
+### Start the VNC Monitoring Engine
+
+```bash
+python main.py
 ```
+
+### Start the Dashboard
+
+```bash
+npm run start
+```
+
+### Output
+
+* Real-time logs in the terminal
+* Alerts pushed to dashboard
+* Evidence stored in `/logs` and `/evidence`
+
+---
 
 ## 📂 Project Structure
 
 ```
-Team-Falcon-SIH/
-├── detectors/          # Detection modules
-│   ├── app/           # Application-level monitoring
-│   ├── network/       # Network traffic analysis
-│   └── visual/        # Visual content analysis
-├── proxy/             # VNC proxy implementation
-├── risk_engine/       # Risk assessment logic
-├── response_engine/   # Automated response system
-├── forensics/         # Evidence collection & analysis
-└── blockchain/        # Blockchain integration
+SentinelVNC/
+│── backend/
+│   ├── ocr/
+│   ├── monitor/
+│   ├── detectors/
+│   └── utils/
+│
+│── dashboard/
+│   ├── public/
+│   └── src/
+│
+│── evidence/
+│── logs/
+│── requirements.txt
+│── package.json
+│── README.md
 ```
 
-## 📝 Documentation
+---
 
-For detailed documentation, please refer to:
-- [Architecture Overview](docs/ARCHITECTURE.md)
-- [API Reference](docs/API.md)
-- [Deployment Guide](docs/DEPLOYMENT.md)
+## 🧪 Roadmap
+
+* [ ] Add ML-based exfiltration prediction
+* [ ] Add session replay visualization
+* [ ] Implement multi-agent detection
+* [ ] Add SIEM integration (ELK / Splunk)
+* [ ] Add live incident heatmaps
+
+---
 
 ## 🤝 Contributing
 
-We welcome contributions! Please see our [Contributing Guidelines](CONTRIBUTING.md) for details.
+Contributions are welcome!
+If you want to improve detection modules or add new capabilities, feel free to open an issue or submit a pull request.
 
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
+---
 
-## 📄 License
+## 📜 License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is protected under the **MIT License**.
+Feel free to modify and build upon it.
 
-## 👥 Team
+---
 
-- [Rahul Issar](https://github.com/Rahul-issar09)
-- [Add Team Member 2]
-- [Add Team Member 3]
+## ⭐ Support
 
-## 🙏 Acknowledgments
+If you like the project, **leave a star on GitHub** — it helps a lot!
 
-- [List any libraries or frameworks used]
-- [Inspiration]
-- [References]
 ```
 
-### Recommended Next Steps:
+---
 
-1. **Create Supporting Files**:
-   - `CONTRIBUTING.md` - For contribution guidelines
-   - `LICENSE` - MIT or your preferred license
-   - `docs/` - Directory for detailed documentation
+If you want, I can also create:
 
-2. **Add Visuals**:
-   - Add a `screenshots/` directory
-   - Include system architecture diagrams
-   - Add demo GIFs or videos
+✅ Logo for SentinelVNC  
+✅ Architecture diagram  
+✅ GIF demo preview  
+✅ Badges like CI/CD, version, repo size  
 
-3. **Customize**:
-   - Update team members section
-   - Add specific feature details
-   - Include setup instructions for dependencies
-
-4. **Badges**:
-   - Add CI/CD status badges
-   - Code coverage
-   - Documentation status
-
-5. **Documentation**:
-   - Add detailed installation instructions
-   - Include configuration examples
-   - Add troubleshooting guide
-
-Would you like me to help you create any of these additional files or customize any section further?
+Just tell me!
+```
