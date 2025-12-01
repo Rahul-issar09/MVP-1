@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 import logging
+import os
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Header
 from fastapi.middleware.cors import CORSMiddleware
 
 from .service import ForensicsService
@@ -24,9 +25,22 @@ app.add_middleware(
 
 service = ForensicsService()
 
+FORENSICS_API_KEY = os.getenv("FORENSICS_API_KEY")
+
+
+@app.get("/health")
+async def health():
+    """Health check endpoint."""
+    return {"status": "ok", "service": "forensics"}
+
 
 @app.post("/forensics/start", response_model=ForensicsStartResponse)
-async def forensics_start(payload: ForensicsStartRequest) -> ForensicsStartResponse:
+async def forensics_start(
+    payload: ForensicsStartRequest,
+    x_api_key: str | None = Header(default=None),
+) -> ForensicsStartResponse:
+    if FORENSICS_API_KEY and x_api_key != FORENSICS_API_KEY:
+        raise HTTPException(status_code=401, detail="Unauthorized: invalid API key")
     try:
         return await service.start_forensics(payload)
     except Exception as exc:  # noqa: BLE001
@@ -35,7 +49,12 @@ async def forensics_start(payload: ForensicsStartRequest) -> ForensicsStartRespo
 
 
 @app.post("/forensics/anchor", response_model=AnchorResponse)
-async def forensics_anchor(payload: AnchorRequest) -> AnchorResponse:
+async def forensics_anchor(
+    payload: AnchorRequest,
+    x_api_key: str | None = Header(default=None),
+) -> AnchorResponse:
+    if FORENSICS_API_KEY and x_api_key != FORENSICS_API_KEY:
+        raise HTTPException(status_code=401, detail="Unauthorized: invalid API key")
     try:
         return await service.anchor(payload)
     except Exception as exc:  # noqa: BLE001

@@ -36,13 +36,35 @@ class DetectorEvent(BaseModel):
 
 
 def build_detector_event(event: ProxyEvent) -> DetectorEvent:
-    if event.length > 1500 and event.direction == "client_to_server":
-        event_type = "file_transfer_candidate"
-        confidence = 0.2
-    elif event.length > 0 and event.direction == "client_to_server":
-        event_type = "network_activity"
-        confidence = 0.05
+    # Heuristic DNS/ICMP anomaly detection based only on packet size
+    # and direction. The proxy currently does not expose full protocol
+    # metadata, so these are best-effort signals for tunneling.
+
+    if event.direction == "client_to_server":
+        if event.length > 50000:  # Very large file transfers
+            event_type = "file_transfer_candidate"
+            confidence = 0.7
+        elif event.length > 1500:
+            # Large client packets are likely file transfers
+            event_type = "file_transfer_candidate"
+            confidence = 0.5
+        elif 60 <= event.length <= 120:
+            # Typical DNS packets are small; a sustained pattern of
+            # similarly sized packets can indicate DNS tunneling.
+            event_type = "dns_tunnel_suspected"
+            confidence = 0.4
+        elif 100 <= event.length <= 300:
+            # ICMP echo with unusual payload sizes used for tunneling.
+            event_type = "icmp_tunnel_suspected"
+            confidence = 0.4
+        elif event.length > 0:
+            event_type = "network_activity"
+            confidence = 0.05
+        else:
+            event_type = "network_activity"
+            confidence = 0.01
     else:
+        # Server-to-client traffic: still useful for context but lower impact.
         event_type = "server_response_activity"
         confidence = 0.05
 
@@ -61,21 +83,67 @@ def build_detector_event(event: ProxyEvent) -> DetectorEvent:
 
 async def send_to_risk_engine(detector_event: DetectorEvent) -> None:
     backoff = 0.5
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(timeout=10.0) as client:
         for attempt in range(3):
             try:
-                await client.post(RISK_ENGINE_URL, json=detector_event.model_dump())
-                return
-            except Exception as exc:
-                logger.warning(
-                    "Failed to send detector_event to risk_engine (attempt %d): %s",
-                    attempt + 1,
-                    exc,
+                resp = await client.post(
+                    RISK_ENGINE_URL, 
+                    json=detector_event.model_dump(),
+                    timeout=10.0
                 )
-                if attempt == 2:
-                    break
-                await asyncio.sleep(backoff)
-                backoff *= 2
+                if resp.status_code == 200:
+                    logger.debug(
+                        "Successfully sent detector_event to risk_engine: %s",
+                        detector_event.type
+                    )
+                    return
+                else:
+                    logger.warning(
+                        "Risk engine returned status %d: %s",
+                        resp.status_code,
+                        resp.text[:200]
+                    )
+            except httpx.ConnectError as exc:
+                logger.warning(
+                    "Failed to connect to risk_engine at %s (attempt %d): %s. "
+                    "Make sure Risk Engine is running on port 9000.",
+                    RISK_ENGINE_URL,
+                    attempt + 1,
+                    type(exc).__name__
+                )
+            except httpx.TimeoutException:
+                logger.warning(
+                    "Timeout sending detector_event to risk_engine (attempt %d). "
+                    "Risk Engine may be overloaded.",
+                    attempt + 1
+                )
+            except Exception as exc:
+                error_msg = str(exc) if str(exc) else f"{type(exc).__name__}"
+                logger.warning(
+                    "Failed to send detector_event to risk_engine (attempt %d): %s "
+                    "(Error type: %s)",
+                    attempt + 1,
+                    error_msg,
+                    type(exc).__name__
+                )
+            
+            if attempt == 2:
+                logger.error(
+                    "Failed to send detector_event to risk_engine after 3 attempts. "
+                    "Event type: %s, Session: %s",
+                    detector_event.type,
+                    detector_event.session_id[:8]
+                )
+                break
+            
+            await asyncio.sleep(backoff)
+            backoff *= 2
+
+
+@app.get("/health")
+async def health():
+    """Health check endpoint."""
+    return {"status": "ok", "service": "network_detector"}
 
 
 @app.post("/events")

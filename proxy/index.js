@@ -190,6 +190,19 @@ server.listen(config.listenPort, config.listenHost, () => {
 // --- Admin HTTP API ---------------------------------------------------------
 
 const adminServer = http.createServer((req, res) => {
+  const adminApiKey = process.env.PROXY_ADMIN_API_KEY;
+
+  const sendUnauthorized = () => {
+    res.statusCode = 401;
+    res.setHeader("Content-Type", "application/json");
+    res.end(JSON.stringify({ error: "unauthorized" }));
+  };
+
+  // Basic API key check for admin endpoints if a key is configured.
+  if (adminApiKey && req.headers["x-api-key"] !== adminApiKey) {
+    return sendUnauthorized();
+  }
+
   if (req.method === "POST" && req.url === "/admin/kill-session") {
     let body = "";
     req.on("data", (chunk) => {

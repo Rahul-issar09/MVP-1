@@ -3,14 +3,25 @@ import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Dict, List, Literal, Optional
 
+import httpx
 import yaml
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("risk_engine")
 
 app = FastAPI(title="SentinelVNC Correlator & Risk Engine")
+
+# Add CORS middleware to allow dashboard access
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # In production, specify exact origins
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 # --- Data contracts ---------------------------------------------------------
@@ -47,6 +58,10 @@ class IncidentAcknowledgeRequest(BaseModel):
 
 
 WINDOW_SECONDS = 30
+
+# Where to send incidents once created so that responses & forensics are
+# executed. For the MVP we call the Response Engine directly over HTTP.
+RESPONSE_ENGINE_URL = "http://localhost:9200/incoming-incident"
 
 
 def load_risk_weights() -> Dict[str, int]:
@@ -107,6 +122,13 @@ def risk_level_from_score(score: int) -> str:
 
 
 def action_from_risk_level(level: str) -> str:
+    """Map risk levels to response actions.
+
+    Policy (aligned with PRD):
+    - LOW    -> allow
+    - MEDIUM -> deceive
+    - HIGH   -> kill_session
+    """
     if level == "LOW":
         return "allow"
     if level == "MEDIUM":
@@ -133,6 +155,13 @@ def correlate_and_create_incident(session_id: str) -> Optional[Incident]:
     risk_level = risk_level_from_score(risk_score)
     action = action_from_risk_level(risk_level)
 
+    # For the MVP we always request that forensics collect screenshots,
+    # clipboard logs, and network metadata for this session.
+    # Note: artifact_refs in Incident model is List[str] for simplicity,
+    # but ForensicsStartRequest expects List[ArtifactRef] objects.
+    # We'll pass empty list and let forensics collect based on session_id.
+    artifact_refs = []
+
     incident_id = str(uuid.uuid4())
     incident = Incident(
         incident_id=incident_id,
@@ -141,6 +170,7 @@ def correlate_and_create_incident(session_id: str) -> Optional[Incident]:
         risk_level=risk_level,
         events=windowed_events,
         recommended_action=action,
+        artifact_refs=artifact_refs,
     )
 
     INCIDENTS[incident_id] = incident
@@ -151,11 +181,36 @@ def correlate_and_create_incident(session_id: str) -> Optional[Incident]:
 
 
 def publish_incident(incident: Incident) -> None:
-    # TODO: integrate with Response Engine and Forensics services via HTTP or event bus
-    logger.info("Publishing incident %s to Response/Forensics (stub)", incident.incident_id)
+    """Send the incident to the Response Engine.
+
+    This is a best-effort fire-and-forget HTTP call so that response actions
+    (allow/deceive/kill) and forensics collection can be triggered
+    automatically when an incident is created.
+    """
+
+    try:
+        with httpx.Client(timeout=5.0) as client:
+            resp = client.post(RESPONSE_ENGINE_URL, json=incident.model_dump())
+        logger.info(
+            "Published incident %s to Response Engine status=%s",
+            incident.incident_id,
+            resp.status_code,
+        )
+    except Exception as exc:
+        logger.error(
+            "Failed to publish incident %s to Response Engine: %s",
+            incident.incident_id,
+            exc,
+        )
 
 
 # --- API endpoints ----------------------------------------------------------
+
+
+@app.get("/health")
+async def health():
+    """Health check endpoint."""
+    return {"status": "ok", "service": "risk_engine"}
 
 
 @app.post("/detector-events")
@@ -179,6 +234,43 @@ async def get_incident(incident_id: str) -> Incident:
     if not incident:
         raise HTTPException(status_code=404, detail="Incident not found")
     return incident
+
+
+@app.get("/incidents/{incident_id}/explanation")
+async def get_incident_explanation(incident_id: str) -> Dict[str, object]:
+    """Return a simple risk explanation for the given incident.
+
+    The explanation distributes the final risk score across event types using
+    the same RISK_WEIGHTS that compute_risk_score uses so that dashboards and
+    analysts can see which signals contributed most to the incident.
+    """
+
+    incident = INCIDENTS.get(incident_id)
+    if not incident:
+        raise HTTPException(status_code=404, detail="Incident not found")
+
+    events = incident.events
+    if not events:
+        return {"total_score": 0, "top_contributors": []}
+
+    # Compute raw contributions per type
+    raw_contrib: Dict[str, float] = {}
+    for e in events:
+        weight = RISK_WEIGHTS.get(e.type, 0)
+        raw_contrib[e.type] = raw_contrib.get(e.type, 0.0) + weight * float(e.confidence)
+
+    risk_score = compute_risk_score(events)
+    total_raw = sum(raw_contrib.values()) or 1.0
+
+    contributors = []
+    for etype, raw in raw_contrib.items():
+        scaled = int(round(risk_score * (raw / total_raw)))
+        contributors.append({"type": etype, "score": scaled})
+
+    # Sort by descending contribution
+    contributors.sort(key=lambda x: x["score"], reverse=True)
+
+    return {"total_score": risk_score, "top_contributors": contributors}
 
 
 @app.post("/incidents/acknowledge")

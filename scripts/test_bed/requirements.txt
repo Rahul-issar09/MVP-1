@@ -1,0 +1,8 @@
+# Python dependencies for SentinelVNC test bed
+
+# HTTP client for API calls
+httpx>=0.24.0
+
+# Optional: For advanced VNC client functionality
+# python-vnc-client  # If available
+

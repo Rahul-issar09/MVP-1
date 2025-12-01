@@ -5,6 +5,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import List
 
+from blockchain.client import BlockchainClient
+
 from .collector import ForensicsCollector
 from .utils.schema import (
     AnchorRequest,
@@ -23,6 +25,7 @@ logger = logging.getLogger("forensics.service")
 class ForensicsService:
     def __init__(self) -> None:
         self.collector = ForensicsCollector()
+        self.blockchain = BlockchainClient()
 
     async def start_forensics(self, payload: ForensicsStartRequest) -> ForensicsStartResponse:
         # If no explicit artifact refs were provided, collect all core types
@@ -61,6 +64,19 @@ class ForensicsService:
         merkle_path = manifest_dir / "merkle_root.txt"
         merkle_path.write_text(merkle_root, encoding="utf-8")
 
+        # Anchor the merkle_root on the configured blockchain (Fabric via gateway).
+        tx_id = await self.blockchain.anchor(payload.incident_id, merkle_root, timestamp)
+
+        # Store the returned transaction id in a simple sidecar file so it can be
+        # inspected alongside the manifest and merkle_root.
+        tx_path = manifest_dir / "anchor_tx.txt"
+        if tx_id:
+            tx_path.write_text(str(tx_id), encoding="utf-8")
+        else:
+            # Even if anchoring failed or is not configured, create the file so
+            # tooling can detect that anchoring was attempted.
+            tx_path.write_text("", encoding="utf-8")
+
         logger.info(
             "FOR100 ForensicsCaptureCompleted",
             extra={
@@ -93,20 +109,24 @@ class ForensicsService:
         if manifest_data.get("merkle_root") != payload.merkle_root or stored_root != payload.merkle_root:
             raise ValueError("Provided merkle_root does not match stored manifest")
 
-        # Call blockchain stub (Phase 6: stub only)
-        from blockchain.stub_client import anchor as blockchain_anchor
+        # Verify that this incident/merkle_root pair is actually anchored on the
+        # configured blockchain backend.
+        is_valid = await self.blockchain.verify(payload.incident_id, payload.merkle_root)
 
-        result = blockchain_anchor(
-            {
+        logger.info(
+            "FOR200 ForensicsAnchorCompleted",
+            extra={
                 "incident_id": payload.incident_id,
                 "merkle_root": payload.merkle_root,
-                "timestamp": payload.timestamp,
-            }
+                "anchored": is_valid,
+            },
         )
-        logger.info("FOR200 ForensicsAnchorCompleted", extra={"incident_id": payload.incident_id, "result": result})
+
+        if not is_valid:
+            raise ValueError("Blockchain verification failed for provided merkle_root")
 
         return AnchorResponse(
-            status="anchored_stub",
+            status="anchored_fabric",
             incident_id=payload.incident_id,
             merkle_root=payload.merkle_root,
         )

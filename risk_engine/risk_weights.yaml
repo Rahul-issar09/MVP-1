@@ -1,4 +1,13 @@
-clipboard_spike: 30
-file_transfer_candidate: 40
-screenshot_burst_candidate: 20
-dns_tunnel_suspected: 60
+clipboard_spike_candidate: 150
+file_transfer_candidate: 200
+screenshot_burst_candidate: 150
+dns_tunnel_suspected: 180
+icmp_tunnel_suspected: 160
+suspicious_command_pattern: 170
+file_transfer_metadata: 190
+sensitive_text_detected: 240
+steganography_detected: 260
+network_activity: 20
+app_activity: 20
+visual_activity: 20
+server_response_activity: 5

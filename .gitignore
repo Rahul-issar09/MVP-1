@@ -48,3 +48,9 @@ data/
 .Trashes
 ehthumbs.db
 Thumbs.db
+
+# Add these if not already present:
+node_modules/
+blockchain_data/
+*.log
+.env
